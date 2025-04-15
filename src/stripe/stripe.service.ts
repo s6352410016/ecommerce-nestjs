@@ -165,6 +165,9 @@ export class StripeService {
         cancel_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=false`,
         line_items: checkOutSessionDto,
         mode: "payment",
+        shipping_address_collection: {
+          allowed_countries: ["TH"],
+        },
       });
     } else {
       session = await this.stripe.checkout.sessions.create({
@@ -174,6 +177,9 @@ export class StripeService {
           checkOutSessionDto,
         ],
         mode: "payment",
+        shipping_address_collection: {
+          allowed_countries: ["TH"],
+        },
       });
     }
 
