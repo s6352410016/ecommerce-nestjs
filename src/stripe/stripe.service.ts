@@ -1,8 +1,11 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { CreateProductDto } from "./dto/create-product.dto";
 import Stripe from "stripe";
 import { UpdateProductDto } from "./dto/update-product.dto";
+import { CheckOutSessionDto } from "./dto/checkout-session.dto";
+import { CheckOutSessionRes } from "./utils/checkout-session-res";
+import { Request } from "express";
 
 @Injectable()
 export class StripeService {
@@ -104,6 +107,34 @@ export class StripeService {
     });
   }
 
+  async updateProductImage(
+    stripeProductId: string,
+    oldImage: string,
+    newImage: string,
+  ): Promise<Stripe.Response<Stripe.Product>> {
+    const product = await this.stripe.products.retrieve(stripeProductId);
+    let productImages = product.images;
+    const indexOldImage = productImages.indexOf(oldImage);
+    if (indexOldImage !== 1) {
+      productImages = productImages.map((image, index) => {
+        if (indexOldImage === index) {
+          return newImage;
+        }
+        return image;
+      });
+
+      const productUpdate = await this.stripe.products.update(product.id, {
+        images: productImages,
+      });
+
+      return productUpdate;
+    }
+
+    throw new NotFoundException(
+      "Error cannot update product image on stripe because invalid index of old image",
+    );
+  }
+
   async deleteProductImage(
     stripeProductId: string,
     image: string,
@@ -121,5 +152,33 @@ export class StripeService {
     });
 
     return productUpdate;
+  }
+
+  async checkOutSession(
+    checkOutSessionDto: CheckOutSessionDto | CheckOutSessionDto[],
+  ): Promise<CheckOutSessionRes> {
+    let session: Stripe.Response<Stripe.Checkout.Session>;
+
+    if (Array.isArray(checkOutSessionDto)) {
+      session = await this.stripe.checkout.sessions.create({
+        success_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=true`,
+        cancel_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=false`,
+        line_items: checkOutSessionDto,
+        mode: "payment",
+      });
+    } else {
+      session = await this.stripe.checkout.sessions.create({
+        success_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=true`,
+        cancel_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=false`,
+        line_items: [
+          checkOutSessionDto,
+        ],
+        mode: "payment",
+      });
+    }
+
+    return {
+      url: session.url,
+    };
   }
 }

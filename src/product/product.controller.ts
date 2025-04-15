@@ -134,6 +134,14 @@ export class ProductController {
   }
 
   @UseGuards(AtAuthGuard)
+  @ApiParam({
+    name: "id",
+    type: Number,
+  })
+  @ApiParam({
+    name: "stripeProductId",
+    type: String,
+  })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
@@ -150,10 +158,11 @@ export class ProductController {
     type: ProductImage,
     status: HttpStatus.OK,
   })
-  @Put("image/update/:id")
+  @Put("image/update/:id/:stripeProductId")
   @UseInterceptors(FileInterceptor("image"))
   imageUpdate(
     @Param("id") id: number,
+    @Param("stripeProductId") stripeProductId: string,
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -163,7 +172,7 @@ export class ProductController {
     )
     file: Express.Multer.File,
   ): Promise<ProductImage> {
-    return this.productService.updateImage(+id, file);
+    return this.productService.updateImage(+id, stripeProductId, file);
   }
 
   @UseGuards(AtAuthGuard)

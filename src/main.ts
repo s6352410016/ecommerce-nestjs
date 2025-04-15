@@ -4,6 +4,7 @@ import * as cookieParser from 'cookie-parser';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as morgan from 'morgan';
+import { CheckOutSessionDto } from './stripe/dto/checkout-session.dto';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,7 +14,9 @@ async function bootstrap() {
     .setDescription('Ecommerce API description')
     .setVersion('1.0')
     .build();
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
+  const documentFactory = () => SwaggerModule.createDocument(app, config, {
+    extraModels: [CheckOutSessionDto], //ระบุ DTO ที่ต้องใช้กับ getSchemaPath
+  });
   SwaggerModule.setup('swagger', app, documentFactory);
 
   app.useGlobalPipes(new ValidationPipe());

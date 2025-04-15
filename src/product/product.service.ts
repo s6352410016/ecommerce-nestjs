@@ -376,6 +376,7 @@ export class ProductService {
 
   async updateImage(
     id: number,
+    stripeProductId: string,
     file: Express.Multer.File,
   ): Promise<ProductImage> {
     const productImage = await this.checkProductImage(id);
@@ -388,6 +389,12 @@ export class ProductService {
     });
 
     await this.sendImageToS3(file, newFileName);
+
+    await this.stripeService.updateProductImage(
+      stripeProductId,
+      `${this.configService.get<string>("ACCESS_AWS_BUCKET_NAME")}/${this.configService.get<string>("ACCESS_AWS_BUCKET_FOLDER")}/${productImage.imageUrl}`,
+      `${this.configService.get<string>("ACCESS_AWS_BUCKET_NAME")}/${this.configService.get<string>("ACCESS_AWS_BUCKET_FOLDER")}/${newFileName}`,
+    );
 
     const newProductImage = {
       ...productImage,
