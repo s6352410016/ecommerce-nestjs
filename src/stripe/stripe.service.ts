@@ -1,17 +1,21 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { CreateProductDto } from "./dto/create-product.dto";
 import Stripe from "stripe";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { CheckOutSessionDto } from "./dto/checkout-session.dto";
-import { CheckOutSessionRes } from "./utils/checkout-session-res";
-import { Request } from "express";
+import { OrderService } from "src/order/order.service";
+import { OrderStatus } from "src/order/utils/type";
+import { Order } from "src/order/entities/order.entity";
 
 @Injectable()
 export class StripeService {
   private stripe = new Stripe(process.env.STRIPE_TEST_SECRET_KEY as string);
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private orderService: OrderService,
+  ) {}
 
   async createProduct(createProductDto: CreateProductDto): Promise<{
     productData: Stripe.Response<Stripe.Product>;
@@ -155,36 +159,61 @@ export class StripeService {
   }
 
   async checkOutSession(
-    checkOutSessionDto: CheckOutSessionDto | CheckOutSessionDto[],
-  ): Promise<CheckOutSessionRes> {
+    checkOutSessionDto: CheckOutSessionDto,
+  ): Promise<Order>{
+    const { 
+      customerId, 
+      shippingAddress, 
+      product,
+    } = checkOutSessionDto;
+
     let session: Stripe.Response<Stripe.Checkout.Session>;
 
-    if (Array.isArray(checkOutSessionDto)) {
+    if (Array.isArray(product) && product.length !== 0) {
       session = await this.stripe.checkout.sessions.create({
         success_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=true`,
         cancel_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=false`,
-        line_items: checkOutSessionDto,
+        line_items: product.map((productItem) => ({ price: productItem.priceId, quantity: productItem.quantity })),
         mode: "payment",
-        shipping_address_collection: {
-          allowed_countries: ["TH"],
-        },
       });
-    } else {
+
+      const order = await this.orderService.create({
+        customerId,
+        orderStatus: session.status === "open" ? OrderStatus.OPEN : OrderStatus.UNPAID,
+        shippingAddress,
+        product,
+      });
+      if(order){
+        return order;
+      }
+
+      throw new InternalServerErrorException("Cannot create order because something went wrong");
+    } else if(!Array.isArray(product)) {
       session = await this.stripe.checkout.sessions.create({
         success_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=true`,
         cancel_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=false`,
         line_items: [
-          checkOutSessionDto,
+          {
+            price: product.priceId,
+            quantity: product.quantity,
+          },
         ],
         mode: "payment",
-        shipping_address_collection: {
-          allowed_countries: ["TH"],
-        },
       });
+
+      const order = await this.orderService.create({
+        customerId,
+        orderStatus: session.status === "open" ? OrderStatus.OPEN : OrderStatus.UNPAID,
+        shippingAddress,
+        product,
+      });
+      if(order){
+        return order;
+      }
+
+      throw new InternalServerErrorException("Cannot create order because something went wrong");
     }
 
-    return {
-      url: session.url,
-    };
+    throw new InternalServerErrorException("Error something went wrong");
   }
 }

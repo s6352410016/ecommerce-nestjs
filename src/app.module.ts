@@ -10,6 +10,9 @@ import { Product } from './product/entities/product.entity';
 import { Category } from './category/entity/category.entity';
 import { ProductImage } from './product/entities/product-images.entity';
 import { StripeModule } from './stripe/stripe.module';
+import { OrderModule } from './order/order.module';
+import { Order } from './order/entities/order.entity';
+import { OrderDetail } from './order/entities/order-detail.entity';
 
 @Module({
   imports: [
@@ -27,7 +30,9 @@ import { StripeModule } from './stripe/stripe.module';
         User,
         Product,
         ProductImage,
-        Category
+        Category,
+        Order,
+        OrderDetail,
       ],
       synchronize: process.env.NODE_ENV !== "production",
       logging: false
@@ -37,6 +42,7 @@ import { StripeModule } from './stripe/stripe.module';
     ProductModule,
     CategoryModule,
     StripeModule,
+    OrderModule,
   ],
 })
 export class AppModule {}
