@@ -233,8 +233,8 @@ export class StripeService {
 
   async webhook(req: Request) {
     let event = req.body;
-    console.log("event--------------------------------", event);
-    const endPointSecret = "loving-wow-nimble-speedy";
+
+    const endPointSecret = "whsec_ea16113357141610947a2b8f6e6c9c4ec6d7bc10369b330208b14b5c9a112a4e";
 
     if (endPointSecret) {
       const signature = req.headers["stripe-signature"];
@@ -250,8 +250,10 @@ export class StripeService {
 
     switch(event.type){
       case "checkout.session.completed":
-        const checkOutData = event.data.object;
-        console.log(checkOutData);
+        const checkOutData = event.data.object as Stripe.Checkout.Session;
+        if(checkOutData.status){
+          await this.orderService.update(checkOutData.id, checkOutData.status);
+        }
         break;
       default:
         console.log(`Unhandled event type ${event.type}.`);

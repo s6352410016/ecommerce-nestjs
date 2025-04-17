@@ -4,14 +4,21 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Order } from "./entities/order.entity";
-import { DataSource } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 import { OrderDetail } from "./entities/order-detail.entity";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { Product } from "src/product/entities/product.entity";
+import { InjectRepository } from "@nestjs/typeorm";
+import { OrderStatus } from "./utils/type";
 
 @Injectable()
 export class OrderService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    private dataSource: DataSource,
+
+    @InjectRepository(Order)
+    private orderRepository: Repository<Order>,
+  ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order | null> {
     const { customerId, orderStatus, shippingAddress, product, sessionId } =
@@ -159,5 +166,17 @@ export class OrderService {
         },
       });
     });
+  }
+
+  async update(sessionId: string, status: string) {
+    await this.orderRepository.update(
+      {
+        sessionId,
+      },
+      {
+        orderStatus:
+          status === "complete" ? OrderStatus.PAID : OrderStatus.UNPAID,
+      },
+    );
   }
 }

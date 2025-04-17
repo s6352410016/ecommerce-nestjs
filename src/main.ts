@@ -5,6 +5,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as morgan from 'morgan';
 import { ProductCheckOut } from './stripe/dto/checkout-session.dto';
+import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -31,6 +32,7 @@ async function bootstrap() {
   });
   app.use(cookieParser());
   app.use(morgan("dev"));
+  app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
 
   await app.listen(process.env.PORT ?? 8080);
 }
