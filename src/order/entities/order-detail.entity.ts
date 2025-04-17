@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Order } from "./order.entity";
+import { Product } from "src/product/entities/product.entity";
 
 @Entity("order_detail")
 export class OrderDetail {
@@ -8,13 +9,10 @@ export class OrderDetail {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ApiProperty()
-  @Column({ type: "uuid", name: "order_id" })
-  orderId: string;
-
-  @ApiProperty()
-  @Column({ type: "int", name: "product_id" })
-  productId: number;
+  @ApiProperty({ type: Product })
+  @ManyToOne(() => Product)
+  @JoinColumn({ name: "product_id" })
+  product: Product;
 
   @ApiProperty()
   @Column({ type: "int" })
@@ -54,7 +52,6 @@ export class OrderDetail {
   })
   totalPrice: number;
 
-  @ApiProperty({ type: Order })
   @ManyToOne(() => Order, (order) => order.orders, { onDelete: "CASCADE" })
   @JoinColumn({ name: "order_id" })
   order: Order;

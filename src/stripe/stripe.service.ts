@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { CreateProductDto } from "./dto/create-product.dto";
 import Stripe from "stripe";
@@ -7,6 +11,7 @@ import { CheckOutSessionDto } from "./dto/checkout-session.dto";
 import { OrderService } from "src/order/order.service";
 import { OrderStatus } from "src/order/utils/type";
 import { Order } from "src/order/entities/order.entity";
+import { Request } from "express";
 
 @Injectable()
 export class StripeService {
@@ -160,12 +165,8 @@ export class StripeService {
 
   async checkOutSession(
     checkOutSessionDto: CheckOutSessionDto,
-  ): Promise<Order>{
-    const { 
-      customerId, 
-      shippingAddress, 
-      product,
-    } = checkOutSessionDto;
+  ): Promise<Order> {
+    const { customerId, shippingAddress, product } = checkOutSessionDto;
 
     let session: Stripe.Response<Stripe.Checkout.Session>;
 
@@ -173,22 +174,30 @@ export class StripeService {
       session = await this.stripe.checkout.sessions.create({
         success_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=true`,
         cancel_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=false`,
-        line_items: product.map((productItem) => ({ price: productItem.priceId, quantity: productItem.quantity })),
+        line_items: product.map((productItem) => ({
+          price: productItem.priceId,
+          quantity: productItem.quantity,
+        })),
         mode: "payment",
       });
 
       const order = await this.orderService.create({
         customerId,
-        orderStatus: session.status === "open" ? OrderStatus.OPEN : OrderStatus.UNPAID,
+        orderStatus:
+          session.status === "open" ? OrderStatus.OPEN : OrderStatus.UNPAID,
         shippingAddress,
         product,
+        sessionId: session.id,
       });
-      if(order){
+
+      if (order) {
         return order;
       }
 
-      throw new InternalServerErrorException("Cannot create order because something went wrong");
-    } else if(!Array.isArray(product)) {
+      throw new InternalServerErrorException(
+        "Cannot create order because something went wrong",
+      );
+    } else if (!Array.isArray(product)) {
       session = await this.stripe.checkout.sessions.create({
         success_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=true`,
         cancel_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=false`,
@@ -203,17 +212,50 @@ export class StripeService {
 
       const order = await this.orderService.create({
         customerId,
-        orderStatus: session.status === "open" ? OrderStatus.OPEN : OrderStatus.UNPAID,
+        orderStatus:
+          session.status === "open" ? OrderStatus.OPEN : OrderStatus.UNPAID,
         shippingAddress,
         product,
+        sessionId: session.id,
       });
-      if(order){
+
+      if (order) {
         return order;
       }
 
-      throw new InternalServerErrorException("Cannot create order because something went wrong");
+      throw new InternalServerErrorException(
+        "Cannot create order because something went wrong",
+      );
     }
 
     throw new InternalServerErrorException("Error something went wrong");
+  }
+
+  async webhook(req: Request) {
+    let event = req.body;
+    console.log("event--------------------------------", event);
+    const endPointSecret = "loving-wow-nimble-speedy";
+
+    if (endPointSecret) {
+      const signature = req.headers["stripe-signature"];
+
+      if (signature) {
+        event = this.stripe.webhooks.constructEvent(
+          req.body,
+          signature,
+          endPointSecret,
+        );
+      }
+    }
+
+    switch(event.type){
+      case "checkout.session.completed":
+        const checkOutData = event.data.object;
+        console.log(checkOutData);
+        break;
+      default:
+        console.log(`Unhandled event type ${event.type}.`);
+        break;
+    }
   }
 }

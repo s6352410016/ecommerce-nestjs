@@ -2,7 +2,7 @@ import { Type } from "class-transformer";
 import { IsEnum, IsInt, IsNotEmpty, IsNumber, IsString, ValidateNested } from "class-validator";
 import { OrderStatus } from "../utils/type";
 
-class Product {
+class ProductOrder {
   @Type(() => Number)
   @IsInt()
   @IsNotEmpty()
@@ -34,6 +34,10 @@ export class CreateOrderDto {
   shippingAddress: string;
 
   @ValidateNested({ each: true })
-  @Type(() => Product)
-  product: Product | Product[];
+  @Type(() => ProductOrder)
+  product: ProductOrder | ProductOrder[];
+
+  @IsString()
+  @IsNotEmpty()
+  sessionId: string;
 }

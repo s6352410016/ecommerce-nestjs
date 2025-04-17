@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { StripeController } from './stripe.controller';
 import { StripeService } from './stripe.service';
 import { OrderModule } from 'src/order/order.module';
+import { RawBodyMiddleware } from 'src/middleware/raw-body.middleware';
 
 @Module({
   imports: [OrderModule],
@@ -9,4 +10,9 @@ import { OrderModule } from 'src/order/order.module';
   providers: [StripeService],
   exports: [StripeService],
 })
-export class StripeModule {}
+
+export class StripeModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RawBodyMiddleware).forRoutes("/api/stripe/webhook");
+  }
+}

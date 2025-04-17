@@ -43,6 +43,10 @@ export class Order {
   orders: OrderDetail[];
 
   @ApiProperty()
+  @Column({ type: "varchar", length: 255, name: "session_id" })
+  sessionId: string;
+
+  @ApiProperty()
   @CreateDateColumn()
   createdAt: Date;
 

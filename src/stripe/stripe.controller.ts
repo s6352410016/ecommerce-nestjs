@@ -1,11 +1,12 @@
-import { Body, Controller, HttpStatus, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, HttpStatus, Post, Req, UseGuards } from "@nestjs/common";
 import { StripeService } from "./stripe.service";
-import { CheckOutSessionDto, Product } from "./dto/checkout-session.dto";
+import { CheckOutSessionDto, ProductCheckOut } from "./dto/checkout-session.dto";
 import { ApiBody, ApiResponse, ApiTags, getSchemaPath } from "@nestjs/swagger";
 import { AtAuthGuard } from "src/auth/guards/at-auth.guard";
 import { Order } from "src/order/entities/order.entity";
+import { Request } from "express";
 
-@UseGuards(AtAuthGuard)
+// @UseGuards(AtAuthGuard)
 @ApiTags("stripe")
 @Controller("stripe")
 export class StripeController {
@@ -30,22 +31,27 @@ export class StripeController {
         product: {
           oneOf: [
             {
-              $ref: getSchemaPath(Product),
+              $ref: getSchemaPath(ProductCheckOut),
             },
             {
               type: "array",
               items: {
-                $ref: getSchemaPath(Product),
+                $ref: getSchemaPath(ProductCheckOut),
               },
             },
           ],
         },
       },
-      required: ["customerId", "totalAmount", "shippingAddress", "product"],
+      required: ["customerId", "shippingAddress", "product"],
     },
   })
   @Post("checkout-session")
   checkOutSession(@Body() checkOutSessionDto: CheckOutSessionDto): Promise<Order> {
     return this.stripeService.checkOutSession(checkOutSessionDto);
   }
-}
+
+  @Post("webhook")
+  webhook(@Req() req: Request){
+    return this.stripeService.webhook(req);
+  }
+} 

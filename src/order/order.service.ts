@@ -1,9 +1,12 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { Order } from "./entities/order.entity";
 import { DataSource } from "typeorm";
 import { OrderDetail } from "./entities/order-detail.entity";
 import { CreateOrderDto } from "./dto/create-order.dto";
-import { Orders } from "./utils/type";
 import { Product } from "src/product/entities/product.entity";
 
 @Injectable()
@@ -11,29 +14,55 @@ export class OrderService {
   constructor(private dataSource: DataSource) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order | null> {
-    const { customerId, orderStatus, shippingAddress, product } =
+    const { customerId, orderStatus, shippingAddress, product, sessionId } =
       createOrderDto;
-    let orders: Orders[] = [];
+    let orderDetailsArray: Omit<
+      OrderDetail,
+      "id" | "createdAt" | "updatedAt"
+    >[] = [];
 
     return await this.dataSource.transaction(async (manager) => {
       const orderRepo = manager.getRepository(Order);
       const orderDetailRepo = manager.getRepository(OrderDetail);
       const productRepo = manager.getRepository(Product);
 
-      if(!Array.isArray(product)){
-        const productData = await productRepo.findOneBy({
-          id: product.productId,
+      const findProductById = async (id: number): Promise<Product | null> => {
+        return await productRepo.findOneBy({
+          id,
         });
-        if(productData && product.quantity > productData.stockQuantity){
-          throw new BadRequestException("You cannot purchase products with a quantity ordered greater than the available stock");
+      };
+
+      const updateStockOfProduct = async (
+        productId: number,
+        stockQuantity: number,
+      ) => {
+        await productRepo.update(productId, {
+          stockQuantity,
+        });
+      };
+
+      if (!Array.isArray(product)) {
+        const productData = await findProductById(product.productId);
+        if (!productData) {
+          throw new NotFoundException("Product not found");
         }
-      }else{
-        for(const productItem of product){
-          const productData = await productRepo.findOneBy({
-            id: productItem.productId,
-          });
-          if(productData && productItem.quantity > productData.stockQuantity){
-            throw new BadRequestException("You cannot purchase products with a quantity ordered greater than the available stock");
+
+        if (product.quantity > productData.stockQuantity) {
+          throw new BadRequestException(
+            "You cannot purchase products with a quantity ordered greater than the available stock",
+          );
+        }
+      } else {
+        for (const productItem of product) {
+          const productData = await findProductById(productItem.productId);
+          if (!productData) {
+            throw new NotFoundException("Product not found");
+          }
+
+          if (productItem.quantity > productData.stockQuantity) {
+            throw new BadRequestException(
+              "You cannot purchase products with a quantity ordered greater than the available stock",
+            );
           }
         }
       }
@@ -42,32 +71,48 @@ export class OrderService {
         customerId,
         orderStatus,
         shippingAddress,
+        sessionId,
       });
       const order = await orderRepo.save(orderSave);
 
       if (Array.isArray(product) && product.length !== 0) {
-        const ordersData = product.map((productItem) => ({
-          orderId: order.id,
-          productId: productItem.productId,
-          quantity: productItem.quantity,
-          unitPrice: productItem.unitPrice,
-          totalPrice: productItem.quantity * productItem.unitPrice,
-        }));
-        orders.push(...ordersData);
+        const orderDetailsData = product.map(async (productItem) => {
+          const product = await findProductById(productItem.productId);
+          if (!product) {
+            throw new NotFoundException("Product not found");
+          }
+
+          return {
+            order,
+            product,
+            quantity: productItem.quantity,
+            unitPrice: productItem.unitPrice,
+            totalPrice: productItem.quantity * productItem.unitPrice,
+          };
+        });
+
+        const orderDetails = await Promise.all(orderDetailsData);
+
+        orderDetailsArray.push(...orderDetails);
       } else if (!Array.isArray(product)) {
-        const orderData = {
-          orderId: order.id,
-          productId: product.productId,
+        const productData = await findProductById(product.productId);
+        if (!productData) {
+          throw new NotFoundException("Product not found");
+        }
+
+        const orderDetailsData = {
+          order,
+          product: productData,
           quantity: product.quantity,
           unitPrice: product.unitPrice,
           totalPrice: product.quantity * product.unitPrice,
         };
-        orders.push(orderData);
+        orderDetailsArray.push(orderDetailsData);
       }
 
-      const orderDetail = orderDetailRepo.create(orders);
-      const orderDetailSave = await orderDetailRepo.save(orderDetail);
-      const totalAmount = orderDetailSave.reduce(
+      const orderDetails = orderDetailRepo.create(orderDetailsArray);
+      const orderDetailsSave = await orderDetailRepo.save(orderDetails);
+      const totalAmount = orderDetailsSave.reduce(
         (prevValue, orderDetailItem) => orderDetailItem.totalPrice + prevValue,
         0,
       );
@@ -77,27 +122,27 @@ export class OrderService {
       });
 
       if (!Array.isArray(product)) {
-        const productData = await productRepo.findOneBy({
-          id: product.productId,
-        });
-
-        if (productData) {
-          await productRepo.update(productData.id, {
-            stockQuantity: productData.stockQuantity - product.quantity,
-          });
+        const productData = await findProductById(product.productId);
+        if (!productData) {
+          throw new NotFoundException("Product not found");
         }
-      } else {
-        product.forEach(async (productItem) => {
-          const productData = await productRepo.findOneBy({
-            id: productItem.productId,
-          });
 
-          if (productData) {
-            await productRepo.update(productData.id, {
-              stockQuantity: productData.stockQuantity - productItem.quantity,
-            });
+        await updateStockOfProduct(
+          product.productId,
+          productData.stockQuantity - product.quantity,
+        );
+      } else {
+        for (const productItem of product) {
+          const productData = await findProductById(productItem.productId);
+          if (!productData) {
+            throw new NotFoundException("Product not found");
           }
-        });
+
+          await updateStockOfProduct(
+            productItem.productId,
+            productData.stockQuantity - productItem.quantity,
+          );
+        }
       }
 
       return await orderRepo.findOne({
@@ -105,7 +150,12 @@ export class OrderService {
           id: order.id,
         },
         relations: {
-          orders: true,
+          orders: {
+            product: {
+              category: true,
+              images: true,
+            },
+          },
         },
       });
     });
