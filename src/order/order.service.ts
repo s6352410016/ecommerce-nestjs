@@ -10,6 +10,7 @@ import { CreateOrderDto } from "./dto/create-order.dto";
 import { Product } from "src/product/entities/product.entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import { OrderStatus } from "./utils/type";
+import { User } from "src/users/entity/user.entity";
 
 @Injectable()
 export class OrderService {
@@ -21,8 +22,15 @@ export class OrderService {
   ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order | null> {
-    const { customerId, orderStatus, shippingAddress, product, sessionId } =
-      createOrderDto;
+    const {
+      userId,
+      orderStatus,
+      shippingAddress,
+      phone,
+      email,
+      product,
+      sessionId,
+    } = createOrderDto;
     let orderDetailsArray: Omit<
       OrderDetail,
       "id" | "createdAt" | "updatedAt"
@@ -32,6 +40,7 @@ export class OrderService {
       const orderRepo = manager.getRepository(Order);
       const orderDetailRepo = manager.getRepository(OrderDetail);
       const productRepo = manager.getRepository(Product);
+      const userRepo = manager.getRepository(User);
 
       const findProductById = async (id: number): Promise<Product | null> => {
         return await productRepo.findOneBy({
@@ -74,10 +83,19 @@ export class OrderService {
         }
       }
 
+      const user = await userRepo.findOneBy({
+        id: userId,
+      });
+      if (!user) {
+        throw new NotFoundException("User not found");
+      }
+
       const orderSave = orderRepo.create({
-        customerId,
+        user,
         orderStatus,
         shippingAddress,
+        phone,
+        email,
         sessionId,
       });
       const order = await orderRepo.save(orderSave);
@@ -157,11 +175,26 @@ export class OrderService {
           id: order.id,
         },
         relations: {
+          user: true,
           orders: {
             product: {
               category: true,
               images: true,
             },
+          },
+        },
+        select: {
+          user: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            address: true,
+            role: true,
+            avatar: true,
+            provider: true,
+            providerId: true,
+            createdAt: true,
           },
         },
       });

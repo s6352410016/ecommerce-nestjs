@@ -20,13 +20,21 @@ export class StripeController {
     schema: {
       type: "object",
       properties: {
-        customerId: {
+        userId: {
           type: "number",
-          description: "Customer ID",
+          description: "User ID",
         },
         shippingAddress: {
           type: "string",
           description: "Shipping address for the order",
+        },
+        phone: {
+          type: "string",
+          description: "phone number",
+        },
+        email: {
+          type: "string",
+          description: "email address for the order",
         },
         product: {
           oneOf: [
@@ -42,7 +50,7 @@ export class StripeController {
           ],
         },
       },
-      required: ["customerId", "shippingAddress", "product"],
+      required: ["userId", "shippingAddress", "phone", "email", "product"],
     },
   })
   @Post("checkout-session")
@@ -52,7 +60,7 @@ export class StripeController {
 
   @ApiExcludeEndpoint()
   @HttpCode(HttpStatus.OK)
-  @Post("webhook")
+  @Post("webhook") 
   webhook(@Req() req: Request){
     return this.stripeService.webhook(req);
   }

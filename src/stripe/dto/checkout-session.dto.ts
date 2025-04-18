@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsInt, IsNotEmpty, IsNumber, IsString, ValidateNested } from "class-validator";
+import { IsEmail, IsInt, IsNotEmpty, IsNumber, IsString, ValidateNested } from "class-validator";
 
 export class ProductCheckOut {
   @ApiProperty()
@@ -32,12 +32,22 @@ export class CheckOutSessionDto {
   @Type(() => Number)
   @IsInt()
   @IsNotEmpty()
-  customerId: number;
+  userId: number;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
   shippingAddress: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  phone: string;
+
+  @ApiProperty()
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
 
   @ApiProperty({ type: [ProductCheckOut] })
   @ValidateNested({ each: true })

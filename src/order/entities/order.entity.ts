@@ -1,7 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { OrderDetail } from "./order-detail.entity";
 import { OrderStatus } from "../utils/type";
+import { User } from "src/users/entity/user.entity";
 
 @Entity("order")
 export class Order {
@@ -10,8 +11,9 @@ export class Order {
   id: string;
 
   @ApiProperty()
-  @Column({ type: "int", name: "customer_id" })
-  customerId: number;
+  @ManyToOne(() => User, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "user_id" })
+  user: User;
 
   @ApiProperty()
   @Column({
@@ -38,6 +40,14 @@ export class Order {
   @Column({ type: "text", name: "shipping_address" })
   shippingAddress: string;
 
+  @ApiProperty()
+  @Column({ type: "varchar", length: 20 })
+  phone: string;
+  
+  @ApiProperty()
+  @Column({ type: "varchar", length: 255 })
+  email: string;
+
   @ApiProperty({ type: [OrderDetail] })
   @OneToMany(() => OrderDetail, (orderDetail) => orderDetail.order)
   orders: OrderDetail[];
@@ -53,4 +63,7 @@ export class Order {
   @ApiProperty()
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @ApiProperty()
+  clientSecret: string
 }

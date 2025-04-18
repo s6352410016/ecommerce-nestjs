@@ -166,32 +166,37 @@ export class StripeService {
   async checkOutSession(
     checkOutSessionDto: CheckOutSessionDto,
   ): Promise<Order> {
-    const { customerId, shippingAddress, product } = checkOutSessionDto;
+    const { userId, shippingAddress, phone, email, product } = checkOutSessionDto;
 
     let session: Stripe.Response<Stripe.Checkout.Session>;
 
     if (Array.isArray(product) && product.length !== 0) {
       session = await this.stripe.checkout.sessions.create({
-        success_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=true`,
-        cancel_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=false`,
+        return_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=true`,
         line_items: product.map((productItem) => ({
           price: productItem.priceId,
           quantity: productItem.quantity,
         })),
         mode: "payment",
+        ui_mode: "embedded",
       });
 
       const order = await this.orderService.create({
-        customerId,
+        userId,
         orderStatus:
           session.status === "open" ? OrderStatus.OPEN : OrderStatus.UNPAID,
         shippingAddress,
+        phone,
+        email,
         product,
         sessionId: session.id,
       });
 
-      if (order) {
-        return order;
+      if (order && session.client_secret) {
+        return {
+          ...order,
+          clientSecret: session.client_secret,
+        };
       }
 
       throw new InternalServerErrorException(
@@ -199,8 +204,7 @@ export class StripeService {
       );
     } else if (!Array.isArray(product)) {
       session = await this.stripe.checkout.sessions.create({
-        success_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=true`,
-        cancel_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=false`,
+        return_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=true`,
         line_items: [
           {
             price: product.priceId,
@@ -208,19 +212,25 @@ export class StripeService {
           },
         ],
         mode: "payment",
+        ui_mode: "embedded",
       });
 
       const order = await this.orderService.create({
-        customerId,
+        userId,
         orderStatus:
           session.status === "open" ? OrderStatus.OPEN : OrderStatus.UNPAID,
         shippingAddress,
         product,
+        phone,
+        email,
         sessionId: session.id,
       });
 
-      if (order) {
-        return order;
+      if (order && session.client_secret) {
+        return {
+          ...order,
+          clientSecret: session.client_secret,
+        };
       }
 
       throw new InternalServerErrorException(
@@ -234,7 +244,7 @@ export class StripeService {
   async webhook(req: Request) {
     let event = req.body;
 
-    const endPointSecret = "whsec_ea16113357141610947a2b8f6e6c9c4ec6d7bc10369b330208b14b5c9a112a4e";
+    const endPointSecret = this.configService.get<string>("STRIPE_WEBHOOK_ENDPOINT_SECRET");
 
     if (endPointSecret) {
       const signature = req.headers["stripe-signature"];

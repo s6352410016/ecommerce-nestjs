@@ -23,7 +23,7 @@ export class CreateOrderDto {
   @Type(() => Number)
   @IsInt()
   @IsNotEmpty()
-  customerId: number;
+  userId: number;
 
   @IsEnum(OrderStatus)
   @IsNotEmpty()
@@ -32,6 +32,14 @@ export class CreateOrderDto {
   @IsString()
   @IsNotEmpty()
   shippingAddress: string;
+
+  @IsString()
+  @IsNotEmpty()
+  phone: string;
+
+  @IsString()
+  @IsNotEmpty()
+  email: string;
 
   @ValidateNested({ each: true })
   @Type(() => ProductOrder)
