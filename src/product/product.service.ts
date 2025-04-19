@@ -267,7 +267,7 @@ export class ProductService {
 
     const productPaginate = products.slice(
       (page - 1) * limit,
-      page + limit - 1,
+      page * limit,
     );
     const itemPerPage = 10;
     const totalPages = Math.ceil(totalItems / itemPerPage);

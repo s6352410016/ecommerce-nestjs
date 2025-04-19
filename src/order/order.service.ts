@@ -212,4 +212,36 @@ export class OrderService {
       },
     );
   }
+
+  async checkOrderStatus(orderId: string): Promise<{ status: string; }> {
+    const order = await this.orderRepository.findOneBy({ id: orderId });
+    if (!order) {
+      throw new NotFoundException("Order not found");
+    }
+    return {
+      status: order.orderStatus,
+    };
+  }
+
+  async getOrderByUserId(userId: number): Promise<Order[]> {
+    const orders = await this.orderRepository.find({
+      where: {
+        user: {
+          id: userId,
+        },
+      },
+      relations: {
+        orders: {
+          product: {
+            category: true,
+            images: true,
+          },
+        },
+      },
+      order: {
+        createdAt: "DESC",
+      }
+    });
+    return orders;
+  }
 }

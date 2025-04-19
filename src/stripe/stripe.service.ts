@@ -172,7 +172,7 @@ export class StripeService {
 
     if (Array.isArray(product) && product.length !== 0) {
       session = await this.stripe.checkout.sessions.create({
-        return_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=true`,
+        return_url: `${this.configService.get<string>("CLIENT_URL")}/checkout`,
         line_items: product.map((productItem) => ({
           price: productItem.priceId,
           quantity: productItem.quantity,
@@ -204,7 +204,7 @@ export class StripeService {
       );
     } else if (!Array.isArray(product)) {
       session = await this.stripe.checkout.sessions.create({
-        return_url: `${this.configService.get<string>("CLIENT_URL")}/checkout?success=true`,
+        return_url: `${this.configService.get<string>("CLIENT_URL")}/checkout`,
         line_items: [
           {
             price: product.priceId,

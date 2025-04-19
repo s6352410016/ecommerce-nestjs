@@ -50,7 +50,7 @@ export class ProductController {
     @UploadedFiles(
       new ParseFilePipe({
         validators: [
-          new FileTypeValidator({ fileType: /^image\/(png|jpg|jpeg|webp)$/ }),
+          new FileTypeValidator({ fileType: /^image\/(png|jpg|jpeg|webp|avif)$/ }),
         ],
       }),
     )
@@ -166,7 +166,7 @@ export class ProductController {
     @UploadedFile(
       new ParseFilePipe({
         validators: [
-          new FileTypeValidator({ fileType: /^image\/(png|jpg|jpeg|webp)$/ }),
+          new FileTypeValidator({ fileType: /^image\/(png|jpg|jpeg|webp|avif)$/ }),
         ],
       }),
     )
