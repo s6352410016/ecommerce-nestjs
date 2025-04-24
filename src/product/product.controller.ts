@@ -32,6 +32,7 @@ import { CommonResSwagger } from "./utils/common-res-swagger";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { PaginationDto } from "./dto/pagination.dto";
 import { AtAuthGuard } from "src/auth/guards/at-auth.guard";
+import 'multer';
 
 @ApiTags("product")
 @Controller("product")

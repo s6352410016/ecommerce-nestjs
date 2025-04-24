@@ -21,6 +21,7 @@ import { UpdateProductDto } from "./dto/update-product.dto";
 import { Category } from "src/category/entity/category.entity";
 import { PaginationDto } from "./dto/pagination.dto";
 import { StripeService } from "src/stripe/stripe.service";
+import 'multer';
 
 @Injectable()
 export class ProductService {

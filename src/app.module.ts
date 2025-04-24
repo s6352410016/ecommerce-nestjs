@@ -34,8 +34,8 @@ import { OrderDetail } from './order/entities/order-detail.entity';
         Order,
         OrderDetail,
       ],
-      synchronize: process.env.NODE_ENV !== "production",
-      logging: false
+      synchronize: true,
+      logging: true,
     }),
     UsersModule,
     AuthModule,

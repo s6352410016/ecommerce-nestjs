@@ -31,7 +31,7 @@ async function bootstrap() {
     credentials: true,
   });
   app.use(cookieParser());
-  app.use(morgan("dev"));
+  app.use(morgan("combined"));
   app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
 
   await app.listen(process.env.PORT ?? 8080);

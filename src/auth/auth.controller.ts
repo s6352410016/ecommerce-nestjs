@@ -47,7 +47,7 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     @Post("signin")
     signIn(@Request() req: Req, @Response({ passthrough: true }) res: Res): Promise<ResSwagger> {
-        return this.authService.signIn(req.user as ReqObjUser, res);
+        return this.authService.signIn((req as Req & { user: ReqObjUser }).user, res);
     }
 
     @ApiBody({ type: SignUpDto })
@@ -67,7 +67,7 @@ export class AuthController {
     @UseGuards(AtAuthGuard)
     @Get("profile")
     profile(@Request() req: Req): Promise<Omit<User, "passwordHash">>{
-        return this.authService.profile(req.user as JwtPayloadDto);  
+        return this.authService.profile((req as Req & { user: JwtPayloadDto }).user);  
     }
 
     @ApiResponse({
@@ -78,7 +78,7 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     @Post("refresh")
     refresh(@Request() req: Req, @Response({ passthrough: true }) res: Res): Promise<ResSwagger>{
-        return this.authService.refresh(req.user as JwtPayloadDto, res);
+        return this.authService.refresh((req as Req & { user: JwtPayloadDto }).user, res);
     }
 
     @ApiResponse({
@@ -103,7 +103,7 @@ export class AuthController {
     @UseGuards(GoogleAuthGuard)
     @Get("google/callback")
     async googleAuthRedirect(@Request() req: Req, @Response({ passthrough: true }) res: Res){
-        return this.authService.googleSignIn(req.user as GoogleSignInDto, res);
+        return this.authService.googleSignIn((req as Req & { user: GoogleSignInDto }).user, res);
     }
 
     @ApiResponse({ description: "open github signin" })
@@ -118,6 +118,6 @@ export class AuthController {
     @UseGuards(GitHubAuthGuard)
     @Get("github/callback")
     async gitHubAuthRedirect(@Request() req: Req, @Response({ passthrough: true }) res: Res){
-        return this.authService.gitHubSignIn(req.user as GitHubSignInDto, res);
+        return this.authService.gitHubSignIn((req as Req & { user: GitHubSignInDto }).user, res);
     }
 }

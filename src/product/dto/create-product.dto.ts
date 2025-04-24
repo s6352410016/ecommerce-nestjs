@@ -6,6 +6,7 @@ import {
     IsInt,
     IsNumber,
 } from 'class-validator';
+import 'multer';
 
 export class CreateProductDto {
     @ApiProperty()
